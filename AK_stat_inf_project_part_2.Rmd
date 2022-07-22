@@ -1,0 +1,110 @@
+---
+title: "Part 2: Basic Inferential Data Analysis"
+author: "Akhil Kota"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(datasets)
+library(ggplot2)
+library(dplyr)
+data("ToothGrowth")
+```
+
+## Overview
+
+In this project, we will carry out some statistical inference on the Tooth Growth data set, which tracks the growth of teeth in a set of guinea pigs given certain doses of supplements. First, we will carry out some exploratory analysis. Then, we will carry out statistical inference to compare tooth growth by the dose and supp variables in the data set (whether they make a difference or not).
+
+## Exploratory Analysis
+
+First, let's look at some summary data for the Tooth Growth data.
+```{r summary}
+str(ToothGrowth)
+summary(ToothGrowth)
+```
+It looks like the dose variable is given as a continuous variable, even though it's probably a discrete variable in the context of this experiment. Let's look at the unique values of dose to see if this is true, and make it a factor variable if it is. This will help with plotting.
+```{r factordose}
+unique(ToothGrowth$dose)
+ToothGrowth$dose<-as.factor(ToothGrowth$dose)
+```
+Reprinting the summary:
+```{r summary2}
+summary(ToothGrowth)
+```
+And just for good measure, let's make sure that the doses are evenly distributed across supps.
+```{r vcsummary}
+summary(subset(ToothGrowth, supp=="VC"))
+```
+Great! Now let's visualize the data. Since these are discrete variables, we will opt to visualize with boxplots. First, let's look at the data by dose.
+```{r doseboxplot}
+boxplot(len ~ dose, data=ToothGrowth, xlab = "Dose (mg/day)", ylab = "Tooth Length")
+abline(lm(ToothGrowth$len ~ as.numeric(ToothGrowth$dose)))
+```
+There seem to be a general positive correlation for tooth length vs dosage of supplement (the best fit line has been provided as well). We will test this later with inferential analysis. For now, let's also look at the relationship between supp and len.
+```{r suppboxplot}
+boxplot(len ~ supp, data=ToothGrowth, xlab = "Supplement Type", ylab = "Tooth Length")
+```
+These seem to be much more similar, not showing much difference on the boxplot (again, will be tested with inference).  
+  
+Lastly, let's check for relationships between dose and tooth length for each supplement individually.
+```{r suppdoseplot}
+g <- ggplot(ToothGrowth, aes(dose, len, color=dose))
+g <- g + geom_boxplot() + facet_grid(cols = vars(supp))
+g + labs(x = "Dose (mg/day)", y = "Tooth Length", color="Dose")
+```
+There seems to be a clear difference between distributions of data between dose groups. Also, the VC data appears more extreme than the OJ data, showing a steeper uptrend than the OJ data.
+
+## More Summary Data: Distributions Across Dose and Supp
+
+Let's get the means, variances, and standard deviations in the data, grouping by dose first, and then supp.
+```{r dosesummary}
+ToothGrowth %>% group_by(dose) %>% 
+    summarize(mean=mean(len), variance=var(len), stdev=sd(len)) %>% print
+```
+
+```{r suppsummary}
+ToothGrowth %>% group_by(supp) %>% 
+    summarize(mean=mean(len), variance=var(len), stdev=sd(len)) %>% print
+```
+
+## Inferential Analysis
+
+Now, we will perform some statistical inference to consolidate our hypotheses. Let's first test across supp. This will be an unpaired two-sided t-test testing with $\alpha=0.05$ for whether or not there is a difference between the two. We will assume unequal population variances across the supp, since our summary data above shows a difference in variances.
+```{r supptest}
+vclens <- subset(ToothGrowth, supp=="VC")$len
+ojlens <- subset(ToothGrowth, supp=="OJ")$len
+t<-t.test(vclens, ojlens, alternative = "two.sided", mu = 0)
+t
+```
+The 95% confidence interval does barely contain the null hypothesis $\mu$ of 0, so we fail to reject that the null hypothesis (that there is no difference between the means of the two supp groups). The p-value of `r t$p.value`>0.05 also indicates this same conclusion.
+  
+  
+Next, we look at the dose. Since there are 3 doses, we perform 3 different t-tests to find if there are significant differences between the doses. This time, since we already saw a trend in our data, we will perform one-sided tests, where we will try to infer whether the pop. means for the higher doses are greater than the pop. means for the lower doses ($H_a=\mu>0$, when subtracting higher dose mean from lower dose mean). The variances are relatively similar across these, so we will assume equal variances this time.
+```{r dosetests}
+halflens <- subset(ToothGrowth, dose==0.5)$len
+onelens <- subset(ToothGrowth, dose==1)$len
+twolens <- subset(ToothGrowth, dose==2)$len
+onehalft <- t.test(onelens, halflens, alternative = "greater", mu = 0, var.equal = TRUE)
+twoonet <- t.test(twolens, onelens, alternative = "greater", mu = 0, var.equal = TRUE)
+twohalft <- t.test(twolens, halflens, alternative = "greater", mu = 0, var.equal = TRUE)
+```
+Comparing dose=1 mg/day to dose=0.5 mg/day,
+```{r onehalf}
+onehalft
+```
+Comparing dose=2 mg/day to dose=1 mg/day,
+```{r twoone}
+twoonet
+```
+Finally, comparing dose=2 mg/day to dose=0.5 mg/day,
+```{r twohalf}
+twohalft
+```
+In all cases, we see extremely small p-values and confidence intervals that do not contain zero. Thus, for almost any reasonable $\alpha$ (we used 0.05), it seems that we can reject the null hypothesis (that the means are not different across doses) in favor of the alternative (that the means increase as doses increase, between these three tested doses).
+
+## Conclusions
+In conclusion, we see that there is not enough evidence to reject that there is no difference in tooth length across different supplements. However, there is strong evidence to reject that there is no difference in tooth length across various dosage levels of supplement. This supports the general trends we saw in the exploratory plots.  
+  
+Several assumptions were made in regards to the study and our analysis. Firstly, we assumed that the study was conducted in the appropriate manner, using a random collection of guinea pigs representative of the population and minimizing biases across the study. Also, we assume that the distributions of sample means of guinea pig tooth lengths along the different supplements and dosage levels are normally distributed, or approximately so, for a sample size of 20 (for doses) or 30 (for supplements). This is generally a reasonable assumption for large enough sample sizes. To further this analysis, we could include a resampling technique (bootstrap or permutation) to provide us with some more clues about the sample mean distribution, and strengthen our findings.

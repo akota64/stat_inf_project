@@ -1,0 +1,92 @@
+---
+title: "Part 1: Simulation Exercise"
+author: "Akhil Kota"
+output: pdf_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+The exponential distribution is a frequently used distribution with a rate parameter $\lambda$, which determines its mean and standard deviation (both of which are $\frac{1}{\lambda}$). In this report, we will be investigating the distribution of means of samples taken from the exponential distribution. The samples will each have 40 random exponential variables, and a total of 1000 samples will be taken to get a good feel for the distribution and its' properties.
+
+For reference, a plot of the exponential distribution is provided below.
+
+```{r expplot, echo=FALSE}
+x <- seq(0,10,length.out=10000)
+df <- data.frame(x = x, y = dexp(x))
+plot(df, type="l", main = "Exponential Distribution", xlab="Value", ylab="Density")
+```
+
+## Simulations
+
+The simulations were carried out by obtaining 40,000 total random data from the exponential distribution with a set $\lambda=0.2$. These data were reshaped into a matrix with 1000 rows and 40 columns, representing our 1000 simulations of 40 random exponentials each. The means were taken across each row, so the vector "means" contains the data for our relevant exponential sample mean distribution. The mean and standard deviation of this distribution were then calculated and printed below. Note that the seed is specifically set for reproducibility.
+
+```{r sim}
+lambda <- 0.2 ## Rate parameter in exp distribution
+n <- 40 ## Number of exp vars per sample
+s <- 1000 ## Number of sims
+set.seed(seed = 1067)
+dat <- matrix(data = rexp(n*s, rate = lambda), nrow = 1000, ncol = 40)
+means <- apply(dat, 1, mean)
+distb_mean <- mean(means)
+distb_var <- var(means)
+distb_sd <- sd(means)
+data.frame(
+    Mean = distb_mean, 
+    Variance = distb_var, 
+    Standard.Deviation = distb_sd, 
+    row.names = "Summary Statistics")
+```
+
+## Sample Mean vs Theoretical Mean
+
+The theoretical mean $\mu$ of the exponential distribution is $1/\lambda$, which, with $\lambda=0.2$, is $\mu=5$. This means that the theoretical mean of the distribution of sample means of any number of random exponentials should also be $\mu_{\bar{x}}=5$. The sample mean distribution mean we got from our simulation was $\mu_{sim}=$ `r distb_mean`.  
+  
+In the plot below, we show the 1000 sample means from the simulation, the mean of the distribution of sample means, and the theoretical mean of the exponential distribution (which is also the theoretical mean of the sample means distribution).
+
+```{r plotmeans, echo=FALSE}
+hist(means, main="Distribution of Random Exponential Sample Means (n=40)",
+     xlab="Sample Mean Value")
+rug(means)
+abline(v=distb_mean,lwd=3,col="blue")
+abline(v=5,lwd=3,col="red")
+legend("topright", legend = c("Theoretical Mean: 5",paste("Simulations' Mean:", as.character(round(distb_mean, 2)))), col=c("red","blue"), lty=1, lwd=3)
+```
+
+
+## Sample Variance vs Theoretical Variance
+
+The variance of the exponential distribution itself here is $(\frac{1}{\lambda})^2=25$. However, the act of taking samples of several random exponentials, averaging across the samples, and looking at the distribution of sample means leads to a significantly reduced variance, depending on the sample size used. The theoretical variance of our sample mean distribution becomes $\sigma_{\bar{x}}^2=\frac{1}{n\lambda^2}=\frac{25}{40}=0.625$. This corresponds to a theoretical standard error of the mean of $\sigma_{\bar{x}}=\sqrt{5/8}=0.79$.  
+  
+From the simulation, we obtained values of $\sigma_{sim}^2=$ `r distb_var` and so $\sigma_{sim}=$ `r distb_sd`. The code is in the Simulations section above. These are both slightly larger than the theoretical variance and sd, but correspond very well with the theoretical values.
+
+## Similarity to Normal Distribution
+
+Now, we'll take a closer look at our sample mean distribution once again. By the Central Limit Theorem, this distribution should be approximately normal now. Let's see if this is true visually by overlaying a normal distribution with theoretical values $\mu_{\bar{x}}=5$ and $\sigma_{\bar{x}}=\sqrt{5/8}$.
+
+```{r normalcomp, echo=FALSE}
+hist(means, main="Distribution of Random Exponential Sample Means (n=40)",
+     xlab="Value", freq=FALSE, breaks=30)
+x <- seq(0,10,length.out=10000)
+dfnorm <- data.frame(x = x, y = dnorm(x, 5, sqrt(5/8)))
+lines(dfnorm)
+text(7, 0.4, "Normal Distribution Overlayed")
+```
+
+We see that, compared to the normal distribution, our sample mean distribution of exponential samples is relatively close to the normal distribution, but slightly right-skewed, which makes sense given the severe right-skew of the exponential distribution itself. A larger sample size for our samples would move this distribution even closer to normal (by CLT).  
+  
+Now, let's look at the quantiles of our distribution and compare these to normal distribution quantiles.
+
+```{r quantiles}
+pct <- seq(0,1,length.out=11)
+dfquantiles <- data.frame(Cumulative.Probability.Below = pct,
+    Distribution.Quantiles = quantile(means, probs=pct),
+    Normal.Quantiles = qnorm(pct, 5, sqrt(5/8)))
+dfquantiles
+```
+
+The extreme probability values are to be ignored, as the normal distribution spans infinitely, and our sample mean distribution does not. However, the other quantile values match up quite nicely between our distribution and the normal distribution. Again, we see the right-skew of the sample mean distribution in the fact that every single quantile is slightly lower than that of the normal, but it is only a relatively small difference, especially compared to the difference between the exponential distribution itself and the normal. As the sample size is increased, the sample mean distribution will tend closer and closer towards the normal distribution, by CLT.
