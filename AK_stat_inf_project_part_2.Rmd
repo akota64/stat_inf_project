@@ -104,7 +104,7 @@ twohalft
 ```
 In all cases, we see extremely small p-values and confidence intervals that do not contain zero. Thus, for almost any reasonable $\alpha$ (we used 0.05), it seems that we can reject the null hypothesis (that the means are not different across doses) in favor of the alternative (that the means increase as doses increase, between these three tested doses).
 
-## Conclusions
+## Conclusions and Assumptions
 In conclusion, we see that there is not enough evidence to reject that there is no difference in tooth length across different supplements. However, there is strong evidence to reject that there is no difference in tooth length across various dosage levels of supplement. This supports the general trends we saw in the exploratory plots.  
   
 Several assumptions were made in regards to the study and our analysis. Firstly, we assumed that the study was conducted in the appropriate manner, using a random collection of guinea pigs representative of the population and minimizing biases across the study. Also, we assume that the distributions of sample means of guinea pig tooth lengths along the different supplements and dosage levels are normally distributed, or approximately so, for a sample size of 20 (for doses) or 30 (for supplements). This is generally a reasonable assumption for large enough sample sizes. To further this analysis, we could include a resampling technique (bootstrap or permutation) to provide us with some more clues about the sample mean distribution, and strengthen our findings.
